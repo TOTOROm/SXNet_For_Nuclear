@@ -63,22 +63,3 @@ class HDRLoss(nn.Module):
     def forward(self, denoised, target):
         loss = ((denoised - target) ** 2) / (denoised + self._eps) ** 2
         return torch.mean(loss.view(-1))
-
-
-def choose_loss(loss_name):
-    if loss_name == 'mse':
-        return torch.nn.MSELoss(reduction='mean')
-    elif loss_name == 'l1':
-        return torch.nn.L1Loss(reduction='mean')
-    elif loss_name == 'sl1':
-        return torch.nn.SmoothL1Loss(reduction='mean')
-    elif loss_name == 'ssim':
-        return SSIM_Loss(data_range=1.0, size_average=True, channel=3)
-    elif loss_name == 'msssim':
-        return MS_SSIM_Loss(data_range=1.0, win_size=3, size_average=True, channel=3)
-    elif loss_name == 'hdr':
-        return HDRLoss()
-    elif loss_name == 'pl':
-        return P_Loss()
-    elif loss_name == 'me':
-        return MyLoss()

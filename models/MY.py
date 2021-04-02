@@ -2,17 +2,22 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# 默认都用bias，不用asy
-asy = False
-bias = True
+# # 默认都用bias，不用asy
+# asy = False
+# bias = True
+
+asy = True
+bias = False
 
 
 class BasicConv(nn.Module):
 
-    def __init__(self, in_planes, out_planes, kernel_size, stride=1, padding=0, dilation=1, groups=1, relu=True, bn=True, bias=False):
+    def __init__(self, in_planes, out_planes, kernel_size, stride=1, padding=0, dilation=1, groups=1, relu=True,
+                 bn=True, bias=False):
         super(BasicConv, self).__init__()
         self.out_channels = out_planes
-        self.conv = nn.Conv2d(in_planes, out_planes, kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation, groups=groups, bias=bias)
+        self.conv = nn.Conv2d(in_planes, out_planes, kernel_size=kernel_size, stride=stride, padding=padding,
+                              dilation=dilation, groups=groups, bias=bias)
         self.bn = nn.BatchNorm2d(out_planes, eps=1e-5, momentum=0.01, affine=True) if bn else None
         self.relu = nn.ReLU(inplace=True) if relu else None
 
@@ -34,18 +39,21 @@ class BasicRFB(nn.Module):
         inter_planes = in_planes // 8
         self.branch0 = nn.Sequential(
             BasicConv(in_planes, 2 * inter_planes, kernel_size=1, stride=stride),
-            BasicConv(2 * inter_planes, 2 * inter_planes, kernel_size=3, stride=1, padding=visual, dilation=visual, relu=False)
+            BasicConv(2 * inter_planes, 2 * inter_planes, kernel_size=3, stride=1, padding=visual, dilation=visual,
+                      relu=False)
         )
         self.branch1 = nn.Sequential(
             BasicConv(in_planes, inter_planes, kernel_size=1, stride=1),
             BasicConv(inter_planes, 2 * inter_planes, kernel_size=(3, 3), stride=stride, padding=1),
-            BasicConv(2 * inter_planes, 2 * inter_planes, kernel_size=3, stride=1, padding=visual + 1, dilation=visual + 1, relu=False)
+            BasicConv(2 * inter_planes, 2 * inter_planes, kernel_size=3, stride=1, padding=visual + 1,
+                      dilation=visual + 1, relu=False)
         )
         self.branch2 = nn.Sequential(
             BasicConv(in_planes, inter_planes, kernel_size=1, stride=1),
             BasicConv(inter_planes, (inter_planes // 2) * 3, kernel_size=3, stride=1, padding=1),
             BasicConv((inter_planes // 2) * 3, 2 * inter_planes, kernel_size=3, stride=stride, padding=1),
-            BasicConv(2 * inter_planes, 2 * inter_planes, kernel_size=3, stride=1, padding=2 * visual + 1, dilation=2 * visual + 1, relu=False)
+            BasicConv(2 * inter_planes, 2 * inter_planes, kernel_size=3, stride=1, padding=2 * visual + 1,
+                      dilation=2 * visual + 1, relu=False)
         )
 
         self.ConvLinear = BasicConv(6 * inter_planes, out_planes, kernel_size=1, stride=1, relu=False)
@@ -78,11 +86,13 @@ class conv_norm_act(nn.Module):
     def __init__(self, in_c, out_c, k, pad=0, dil=1, bias=True, act_name='relu', asy=False):
         super(conv_norm_act, self).__init__()
         if asy and k == 3 and in_c == out_c and dil == 1:
-            self.conv = nn.Sequential(nn.Conv2d(in_c, out_c, kernel_size=(3, 1), padding=(dil, 0), dilation=dil, bias=bias),
-                                      nn.Conv2d(out_c, out_c, kernel_size=(1, 3), padding=(0, dil), dilation=dil, bias=bias))
+            self.conv = nn.Sequential(
+                nn.Conv2d(in_c, out_c, kernel_size=(3, 1), padding=(dil, 0), dilation=dil, bias=bias),
+                nn.Conv2d(out_c, out_c, kernel_size=(1, 3), padding=(0, dil), dilation=dil, bias=bias))
         elif asy and k == 5 and in_c == out_c and dil == 1:
-            self.conv = nn.Sequential(nn.Conv2d(in_c, out_c, kernel_size=(5, 1), padding=(dil + 1, 0), dilation=dil, bias=bias),
-                                      nn.Conv2d(out_c, out_c, kernel_size=(1, 5), padding=(0, dil + 1), dilation=dil, bias=bias))
+            self.conv = nn.Sequential(
+                nn.Conv2d(in_c, out_c, kernel_size=(5, 1), padding=(dil + 1, 0), dilation=dil, bias=bias),
+                nn.Conv2d(out_c, out_c, kernel_size=(1, 5), padding=(0, dil + 1), dilation=dil, bias=bias))
         else:
             self.conv = nn.Conv2d(in_c, out_c, kernel_size=k, padding=pad, dilation=dil, bias=bias)
 
@@ -673,10 +683,9 @@ class feb_rfb_ab_mish_a(nn.Module):
 
 
 class feb_rfb_ab_mish_a_add(nn.Module):
-    def __init__(self, in_c):
+    def __init__(self, in_c, phase, act_name='mish', asy=True):
         super(feb_rfb_ab_mish_a_add, self).__init__()
-        act_name = 'mish'
-        asy = True
+        self.phase = phase
         self.conv_in = conv_norm_act(in_c, 64, k=3, pad=1, bias=bias, act_name=act_name, asy=asy)
 
         self.bone1 = mkm_bone(act_name=act_name, asy=asy, bias=bias)
@@ -719,18 +728,23 @@ class feb_rfb_ab_mish_a_add(nn.Module):
         z = out1 + out2
         # z = torch.cat([out1, out2], 1)
         z = self.conv_out(z)
-        return x - z
+        out = x - z
+        if self.phase == 'train':
+            return out, None
+        else:
+            return out
 
 
 if __name__ == '__main__':
-    def print_model_parm_nums(model):
-        total = sum([param.nelement() for param in model.parameters()])
-        print('  + Number of params: %.2f(e6)' % (total / 1e6))
+    from ptflops import get_model_complexity_info
+    import time
 
+    net = feb_rfb_ab_mish_a_add(3, 'test').cuda()
+    with torch.no_grad():
+        f, p = get_model_complexity_info(net, (3, 480, 640), as_strings=True, print_per_layer_stat=False, verbose=False)
+        print('FLOPs:', f, 'Parms:', p)
 
-    x = torch.randn(10, 3, 128, 128).cuda()
-    o = feb_rfb_ab_mish(3).cuda()
-    print(o)
-    print_model_parm_nums(o)
-    x = o(x)
-    print(x.shape)
+        x = torch.randn(1, 3, 480, 640).cuda()
+        s = time.clock()
+        y = net(x)
+        print(y.shape, 1 / (time.clock() - s))

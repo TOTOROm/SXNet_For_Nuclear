@@ -3,6 +3,7 @@ import cv2
 import random
 import string
 
+
 def add_text_noise(img, stddev):
     img = img.copy()
     h, w, _ = img.shape
@@ -26,11 +27,13 @@ def add_text_noise(img, stddev):
             break
     return img
 
+
 def add_gaussian_noise(img, stddev):
     noise = np.random.randn(*img.shape) * stddev
     noise_img = img + noise
     noise_img = np.clip(noise_img, 0, 255).astype(np.uint8)
     return noise_img
+
 
 def add_impulse_noise(img, stddev):
     occupancy = np.random.uniform(0, stddev)
@@ -38,3 +41,11 @@ def add_impulse_noise(img, stddev):
     noise = np.random.randint(256, size=img.shape)
     img = img * (1 - mask) + noise * mask
     return img.astype(np.uint8)
+
+
+def add_multi_noise(img, stddev):
+    img = img.copy()
+    g = add_gaussian_noise(img, stddev)
+    t = add_text_noise(g, stddev)
+    i = add_impulse_noise(t, stddev)
+    return i

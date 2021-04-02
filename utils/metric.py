@@ -79,7 +79,7 @@ def _ssim(X, Y,
         size_average (bool, optional): if size_average=True, ssim of all images will be averaged as a scalar
 
     Returns:
-        torch.Tensor: ssim results.
+        torch.Tensor: ssim results_nuclear_real_denoise.
     """
     K1, K2 = K
     batch, channel, height, width = X.shape
@@ -126,11 +126,11 @@ def ssim(X, Y,
         win_size: (int, optional): the size of gauss kernel
         win_sigma: (float, optional): sigma of normal distribution
         win (torch.Tensor, optional): 1-D gauss kernel. if None, a new kernel will be created according to win_size and win_sigma
-        K (list or tuple, optional): scalar constants (K1, K2). Try a larger K2 constant (e.g. 0.4) if you get a negative or NaN results.
+        K (list or tuple, optional): scalar constants (K1, K2). Try a larger K2 constant (e.g. 0.4) if you get a negative or NaN results_nuclear_real_denoise.
         nonnegative_ssim (bool, optional): force the ssim response to be nonnegative with relu
 
     Returns:
-        torch.Tensor: ssim results
+        torch.Tensor: ssim results_nuclear_real_denoise
     """
 
     if len(X.shape) != 4:
@@ -184,9 +184,9 @@ def ms_ssim(X, Y,
         win_sigma: (float, optional): sigma of normal distribution
         win (torch.Tensor, optional): 1-D gauss kernel. if None, a new kernel will be created according to win_size and win_sigma
         weights (list, optional): weights for different levels
-        K (list or tuple, optional): scalar constants (K1, K2). Try a larger K2 constant (e.g. 0.4) if you get a negative or NaN results.
+        K (list or tuple, optional): scalar constants (K1, K2). Try a larger K2 constant (e.g. 0.4) if you get a negative or NaN results_nuclear_real_denoise.
     Returns:
-        torch.Tensor: ms-ssim results
+        torch.Tensor: ms-ssim results_nuclear_real_denoise
     """
     if len(X.shape) != 4:
         raise ValueError('Input images should be 4-d tensors.')
@@ -256,7 +256,7 @@ class SSIM(torch.nn.Module):
             win_size: (int, optional): the size of gauss kernel
             win_sigma: (float, optional): sigma of normal distribution
             channel (int, optional): input channels (default: 3)
-            K (list or tuple, optional): scalar constants (K1, K2). Try a larger K2 constant (e.g. 0.4) if you get a negative or NaN results.
+            K (list or tuple, optional): scalar constants (K1, K2). Try a larger K2 constant (e.g. 0.4) if you get a negative or NaN results_nuclear_real_denoise.
             nonnegative_ssim (bool, optional): force the ssim response to be nonnegative with relu.
         """
 
@@ -294,7 +294,7 @@ class MS_SSIM(torch.nn.Module):
             win_sigma: (float, optional): sigma of normal distribution
             channel (int, optional): input channels (default: 3)
             weights (list, optional): weights for different levels
-            K (list or tuple, optional): scalar constants (K1, K2). Try a larger K2 constant (e.g. 0.4) if you get a negative or NaN results.
+            K (list or tuple, optional): scalar constants (K1, K2). Try a larger K2 constant (e.g. 0.4) if you get a negative or NaN results_nuclear_real_denoise.
         """
 
         super(MS_SSIM, self).__init__()
