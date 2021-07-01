@@ -5,8 +5,9 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
+from pathlib import Path
 
-from data import dataset_img2img
+from utils.data import dataset_img2img
 from utils.metric import batch_PSNR, ssim
 from utils.choices import choose_loss, choose_model
 
@@ -15,21 +16,21 @@ from utils.choices import choose_loss, choose_model
 
 def get_args():
     parser = ArgumentParser()
-    parser.add_argument("--gpu", type=int, default=0)
+    parser.add_argument("--gpu", type=int, default=1)
     parser.add_argument("--mode", choices=['n2c', 'n2n'], default='n2c')  # noise2noise or noise2clean
-    parser.add_argument("--model_name", type=str, default='UNet')
+    parser.add_argument("--model_name", type=str, default='BRDNet')
     parser.add_argument("--n_loss", type=str, default='mse')  # nlu noise type
     parser.add_argument("--t_loss", type=str, default='mse')  # tlu noise type
-    parser.add_argument("--noise_name", type=str, default='')
 
     parser.add_argument("--eval", type=float, default=True)
-    parser.add_argument("--nw", type=int, default=4)  # num of workers
-    parser.add_argument("--bz", type=int, default=32)  # batch size
+    parser.add_argument("--nw", type=int, default=0)  # num of workers
+    parser.add_argument("--bz", type=int, default=64)  # batch size
     parser.add_argument("--ep", type=int, default=120)  # epochs
     parser.add_argument("--lr", type=float, default=1e-3)  # initial learning rate
-    parser.add_argument("--data_root", type=str, default='/home/ipsg/code/sx/datasets')
-    parser.add_argument("--train_set", type=str, default='infreadEN256')
-    parser.add_argument("--val_set", type=str, default='infread')
+    parser.add_argument("--data_root", type=str, default='/home/ipsg/code/sx/datasets/infread/raws/cover_low')
+    parser.add_argument("--noise_name", type=str, default='infread')
+    # parser.add_argument("--train_set", type=str, default='')
+    # parser.add_argument("--val_set", type=str, default='')
     return parser.parse_args()
 
 
@@ -42,7 +43,9 @@ def train(args):
         model_name = model_name + '_' + args.t_loss
     if args.mode == 'n2n':
         model_name = model_name + '-' + args.mode
-    save_dir = 'results2/' + args.train_set + '/' + args.noise_name + '/' + model_name
+    data_root_name = Path(args.data_root).name
+
+    save_dir = 'results/' + data_root_name + '/' + model_name
     print('save dir:', save_dir)
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
@@ -51,19 +54,11 @@ def train(args):
         print(vars(args))
 
     # 数据准备
-    # source_h5_path_train = args.data_root + '/' + args.train_set + '/' + \
-    #                        args.mode + '_' + args.noise_name + '_' + args.train_set + '_noised_train.h5'
-    # source_h5_path_train = source_h5_path_train.replace('__', '_')
-    # target_h5_path_train = source_h5_path_train.replace('noised', 'clean')
-    # source_h5_path_test = args.data_root + '/' + args.val_set + '/' + \
-    #                       args.mode + '_' + args.noise_name + '_' + args.val_set + '_noised_test.h5'
-    # source_h5_path_test = source_h5_path_test.replace('__', '_')
-    # target_h5_path_test = source_h5_path_test.replace('noised', 'clean')
+    source_h5_path_train = args.data_root + '/' + args.mode + '_' + args.noise_name + '_noised_train.h5'
+    target_h5_path_train = source_h5_path_train.replace('noised', 'clean')
+    source_h5_path_test = args.data_root + '/' + args.mode + '_' + args.noise_name + '_noised_test.h5'
+    target_h5_path_test = source_h5_path_test.replace('noised', 'clean')
 
-    source_h5_path_train = '/home/ipsg/code/sx/datasets/infread/images/n2c_infreadEN256_noised_train.h5'
-    target_h5_path_train = '/home/ipsg/code/sx/datasets/infread/images/n2c_infreadEN256_clean_train.h5'
-    source_h5_path_test = '/home/ipsg/code/sx/datasets/infread/images/n2c_infreadEN256_noised_test.h5'
-    target_h5_path_test = '/home/ipsg/code/sx/datasets/infread/images/n2c_infreadEN256_clean_test.h5'
     dataset_train = dataset_img2img(source_h5_path_train, target_h5_path_train)
     dataset_test = dataset_img2img(source_h5_path_test, target_h5_path_test)
     loader_train = DataLoader(dataset=dataset_train, num_workers=args.nw, batch_size=args.bz, shuffle=True)
@@ -104,7 +99,10 @@ def train(args):
             optimizer.step()
         ep_loss /= train_steps
         writer.add_scalar('loss', ep_loss, ep)
-        torch.save(model.state_dict(), os.path.join(save_dir, str(ep) + '.pth'))
+        save_pt_dir = args.data_root + '/pts'
+        if not os.path.exists(save_pt_dir):
+            os.makedirs(save_pt_dir)
+        torch.save(model.state_dict(), os.path.join(save_pt_dir, str(ep) + '.pth'))
         ep_logs.setdefault('epoch', ep)
         ep_logs.setdefault('loss', ep_loss)
 
@@ -144,7 +142,7 @@ def train(args):
 
     # 保存所有记录
     writer.close()
-    with open(os.path.join(save_dir, args.val_set + '_logs.json'), 'w') as f:
+    with open(os.path.join(save_dir, 'logs.json'), 'w') as f:
         json.dump(log_dicts, f, indent=2)
 
 

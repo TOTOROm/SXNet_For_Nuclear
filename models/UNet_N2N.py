@@ -5,14 +5,14 @@ import torch
 import torch.nn as nn
 
 
-class UNet(nn.Module):
+class UNet_N2N(nn.Module):
     """Custom U-Net architecture for Noise2Noise (see Appendix, Table 2)."""
 
-    def __init__(self, in_channels, phase, out_channels=3):
+    def __init__(self, in_channels=3, out_channels=3):
         """Initializes U-Net."""
 
-        super(UNet, self).__init__()
-        self.phase = phase
+        super(UNet_N2N, self).__init__()
+
         # Layers: enc_conv0, enc_conv1, pool1
         self._block1 = nn.Sequential(
             nn.Conv2d(in_channels, 48, 3, stride=1, padding=1),
@@ -84,10 +84,8 @@ class UNet(nn.Module):
 
         # Decoder
         upsample5 = self._block3(pool5)
-        # print(upsample5.shape, pool4.shape)
         concat5 = torch.cat((upsample5, pool4), dim=1)
         upsample4 = self._block4(concat5)
-        # print(upsample4.shape, pool3.shape)
         concat4 = torch.cat((upsample4, pool3), dim=1)
         upsample3 = self._block5(concat4)
         concat3 = torch.cat((upsample3, pool2), dim=1)
@@ -97,22 +95,18 @@ class UNet(nn.Module):
         concat1 = torch.cat((upsample1, x), dim=1)
 
         # Final activation
-        out = self._block6(concat1)
-        if self.phase == 'train':
-            return out, None
-        else:
-            return out
+        return self._block6(concat1)
 
 
 if __name__ == '__main__':
     from ptflops import get_model_complexity_info
     import time
-    net = UNet(3, 'test').cuda()
+    net = UNet_N2N(3).cuda()
     with torch.no_grad():
-        f, p = get_model_complexity_info(net, (3, 256, 256), as_strings=True, print_per_layer_stat=False, verbose=False)
+        f, p = get_model_complexity_info(net, (3, 128, 128), as_strings=True, print_per_layer_stat=False, verbose=False)
         print('FLOPs:', f, 'Parms:', p)
 
-        x = torch.randn(1, 3, 256, 256).cuda()
+        x = torch.randn(1, 3, 128, 128).cuda()
         s = time.clock()
         y = net(x)
         print(y.shape, 1 / (time.clock() - s))

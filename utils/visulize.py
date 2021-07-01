@@ -16,7 +16,7 @@ from pathlib import Path
 import json
 import xlwt
 from tqdm import tqdm
-from train import choose_model
+from train_h5 import choose_model
 import cv2
 import time
 

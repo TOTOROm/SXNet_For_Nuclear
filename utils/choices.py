@@ -12,9 +12,9 @@ def choose_model(model_name, phase):
     if model_name == 'ADNet':
         return ADNET(3, phase)
     elif model_name == 'DnCNN':
-        return DNCNN(3, phase)
+        return DNCNN(1, phase)
     elif model_name == 'BRDNet':
-        return BRDNET(3, phase)
+        return BRDNET(1, phase)
     elif model_name == 'feb_rfb_ab_mish_a_add':
         return feb_rfb_ab_mish_a_add(3, phase)
     elif 'SXNet' in model_name:

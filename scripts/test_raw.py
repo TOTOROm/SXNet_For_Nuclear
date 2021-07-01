@@ -58,6 +58,7 @@ def get_high_low_by_pyramid(data, factor=40, vis=False):
     data_down = avg_pooling(data, pooling_stride=factor)
     data_low = cv2.resize(data_down, (data.shape[1], data.shape[0]), interpolation=cv2.INTER_CUBIC)
     data_high = data - data_low
+    print('data_high_mean:',np.mean(data_high))
     if vis:
         plt.subplot(221)
         plt.axis('off')
@@ -94,8 +95,14 @@ def read_raw_by_np(raw_path, shape=(120, 160), dtype='uint16'):
 def cal_STDV(data):
     # data_high, data_low = get_high_low_by_fft(data, vis=True)
     data_high, data_low = get_high_low_by_pyramid(data, vis=True)
-    (mean_low, stddv_low) = cv2.meanStdDev(data_low)
+    # (mean_low, stddv_low) = cv2.meanStdDev(data_low)
+
+    cv2.normalize(data_high, data_high, -19, 31, cv2.NORM_MINMAX)
+    # cv::normalize(a, a, 0, 255, cv::NORM_MINMAX
+
     (mean_high, stddv_high) = cv2.meanStdDev(data_high)
+    # print(mean_high)
+    # raw_clean.tofile('High_high.raw')
     return stddv_high
 
 
@@ -112,6 +119,8 @@ if __name__ == '__main__':
         raw_clean = raw_clean + raw_tmp
     raw_clean = raw_clean / len(raw_paths)
     raw_clean = raw_clean.astype(raw_type)
+    # raw_clean.tofile('High_Clean.raw')
+    # print('raw_clean_mean:',np.mean(raw_clean))
 
     sttv_clean = cal_STDV(raw_clean)
     sttv_noised = cal_STDV(raw_first)
