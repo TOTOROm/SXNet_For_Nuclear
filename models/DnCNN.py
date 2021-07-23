@@ -70,11 +70,12 @@ import torch.nn as nn
 #             return x1
 
 class DnCNN(nn.Module):
-    def __init__(self, channels, num_of_layers=17):
+    def __init__(self, channels, phase):
         super(DnCNN, self).__init__()
         kernel_size = 3
         padding = 1
         features = 64
+        num_of_layers = 17
         layers = []
         layers.append(nn.Conv2d(in_channels=channels, out_channels=features, kernel_size=kernel_size, padding=padding,
                                 bias=False))
@@ -91,18 +92,23 @@ class DnCNN(nn.Module):
 
     def forward(self, x):
         out = self.dncnn(x)
-        return out
+
+        if self.phase == 'train':
+            return out, None
+        else:
+            return out
 
 if __name__ == '__main__':
     from ptflops import get_model_complexity_info
     import time
     with torch.no_grad():
-        net = DnCNN(3).cuda()
+        ch = 1
+        net = DnCNN(ch, 'test').cuda()
 
-        f, p = get_model_complexity_info(net, (3, 128, 128), as_strings=True, print_per_layer_stat=False, verbose=False)
+        f, p = get_model_complexity_info(net, (ch, 512, 512), as_strings=True, print_per_layer_stat=False, verbose=False)
         print('FLOPs:', f, 'Parms:', p)
 
-        x = torch.randn(1, 3, 128, 128).cuda()
+        x = torch.randn(1, ch, 512, 512).cuda()
         s = time.clock()
         y = net(x)
         print(y.shape, 1 / (time.clock() - s))
