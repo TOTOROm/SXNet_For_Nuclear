@@ -13,8 +13,8 @@ from torch.utils.data import Dataset
 
 from utils.add_noise import add_impulse_noise, add_text_noise, add_gaussian_noise, add_multi_noise
 
-# MAX = math.pow(2, 8)
-MAX = math.pow(2, 14)  # 归一化的分母，14位用于RAW图
+MAX = math.pow(2, 8)
+# MAX = math.pow(2, 14)  # 归一化的分母，14位用于RAW图
 
 
 def tensorNCHW_BGR_to_npHWC_RGB(tensor):
@@ -120,8 +120,10 @@ class dataset_img2img(Dataset):  # 用于pytorch的dataloader
         key = self.keys[index]
         source = np.array(self.source_h5[key])
         target = np.array(self.target_h5[key])
+
         source = torch.from_numpy(np.float32(source / MAX)).permute(2, 0, 1)  # 不管是多少位的图，都用float32的tensor来训练
         target = torch.from_numpy(np.float32(target / MAX)).permute(2, 0, 1)
+
         return source, target
 
 
@@ -142,6 +144,9 @@ class dataset_single_h5(Dataset):
 
 
 def image2patches(img, win, stride):  # 把图像转换位图像块（滑窗法）
+    if len(img.shape) == 2:
+        img = np.array([img]).transpose((1, 2, 0))
+        # print(img.shape)
     h, w, _ = img.shape
     assert win < h and win < w
     patches = []
@@ -254,7 +259,7 @@ def psnr(img1, img2):  # 求PSNR
     return 20 * math.log10(PIXEL_MAX / math.sqrt(mse))
 
 
-def vis_h5(noised_h5_path, data_type='uint16'):  # 可视化数据集，以验证数据集
+def vis_h5(noised_h5_path, data_type='uint8'):  # 可视化数据集，以验证数据集
     assert 'noised' in noised_h5_path
     clean_h5_path = noised_h5_path.replace('noised', 'clean')
     if 'test' in noised_h5_path:
@@ -268,10 +273,16 @@ def vis_h5(noised_h5_path, data_type='uint16'):  # 可视化数据集，以验�
     for n, pair in enumerate(dataset):
         noised = np.array(pair[0].permute(1, 2, 0) * MAX).astype(data_type)
         clean = np.array(pair[1].permute(1, 2, 0) * MAX).astype(data_type)
-        # print(noised.shape, clean.shape)
+
+        if noised.shape[2] == 1:
+            noised = noised.squeeze()
+            clean = clean.squeeze()
+
         p = psnr(clean, noised)
         P.append(p)
+        print('psnr', p)
 
+        # print(noised.shape, noised.dtype, type(noised), np.mean(noised))
         plt.subplot(121)
         plt.title('Noised')
         plt.imshow(noised)
@@ -280,7 +291,7 @@ def vis_h5(noised_h5_path, data_type='uint16'):  # 可视化数据集，以验�
         plt.title('Clean')
         plt.imshow(clean)
         plt.axis('off')
-        plt.show()
+        plt.show(0.1)
         # if n % 2 == 0:
         #     cv2.imwrite(str(n) + '_clean.png', clean, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
         # else:
@@ -342,4 +353,7 @@ if __name__ == '__main__':
     #                    stride=25, num=0)
 
     # gen_infread_h5_denoise_raw('/home/ipsg/code/sx/datasets/infread/raws/cover_low')
-    vis_h5('/home/ipsg/code/sx/datasets/infread/raws/cover_low/n2c_infread_noised_test.h5')
+    # vis_h5('/home/ipsg/code/sx/datasets/infread/raws/cover_low/n2c_infread_noised_test.h5')
+
+    vis_h5('/home/SENSETIME/sunxin/2_myrepos/data/lowlight_denoise/h5/n2c_lowlight_noised_test.h5')
+

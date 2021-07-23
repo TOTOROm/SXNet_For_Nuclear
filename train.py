@@ -16,21 +16,20 @@ from utils.choices import choose_loss, choose_model
 
 def get_args():
     parser = ArgumentParser()
-    parser.add_argument("--gpu", type=int, default=1)
+    parser.add_argument("--gpu", type=int, default=0)
     parser.add_argument("--mode", choices=['n2c', 'n2n'], default='n2c')  # noise2noise or noise2clean
-    parser.add_argument("--model_name", type=str, default='BRDNet')
-    parser.add_argument("--n_loss", type=str, default='mse')  # nlu noise type
-    parser.add_argument("--t_loss", type=str, default='mse')  # tlu noise type
+    parser.add_argument("--model_name", type=str, default='DnCNN')
+    parser.add_argument("--n_loss", type=str, default='l1')  # nlu noise type
+    parser.add_argument("--t_loss", type=str, default='l1')  # tlu noise type
 
     parser.add_argument("--eval", type=float, default=True)
     parser.add_argument("--nw", type=int, default=0)  # num of workers
     parser.add_argument("--bz", type=int, default=64)  # batch size
     parser.add_argument("--ep", type=int, default=120)  # epochs
     parser.add_argument("--lr", type=float, default=1e-3)  # initial learning rate
-    parser.add_argument("--data_root", type=str, default='/home/ipsg/code/sx/datasets/infread/raws/cover_low')
-    parser.add_argument("--noise_name", type=str, default='infread')
-    # parser.add_argument("--train_set", type=str, default='')
-    # parser.add_argument("--val_set", type=str, default='')
+    parser.add_argument("--data_root", type=str, default='/home/SENSETIME/sunxin/2_myrepos/data/blackshark/h5')
+    parser.add_argument("--noise_name", type=str, default='lowlight')
+    parser.add_argument("--save_root", type=str, default='/home/SENSETIME/sunxin/2_myrepos/data/blackshark/DnCNN')
     return parser.parse_args()
 
 
@@ -43,9 +42,9 @@ def train(args):
         model_name = model_name + '_' + args.t_loss
     if args.mode == 'n2n':
         model_name = model_name + '-' + args.mode
-    data_root_name = Path(args.data_root).name
+    # data_root_name = Path(args.data_root).name
 
-    save_dir = 'results/' + data_root_name + '/' + model_name
+    save_dir = args.save_root + '/' + model_name
     print('save dir:', save_dir)
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
@@ -66,14 +65,16 @@ def train(args):
     train_steps, test_num = len(loader_train), len(loader_test)
     print('train_num:', len(dataset_train), 'test_num:', test_num, 'train_steps:', train_steps)
 
+    with_tlu = ('_t' in args.model_name)  # whether using tlu
+
     # 训练准备
     model = choose_model(args.model_name, 'train').cuda()
     criterion_nlu = choose_loss(args.n_loss)
-    criterion_tlu = choose_loss(args.n_loss)
+    if with_tlu:
+        criterion_tlu = choose_loss(args.n_loss)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
     # 开始训练
-    with_tlu = ('_t' in args.model_name)  # whether using tlu
     writer = SummaryWriter(save_dir)
     log_dicts = []
     for epoch in range(args.ep):
@@ -99,7 +100,7 @@ def train(args):
             optimizer.step()
         ep_loss /= train_steps
         writer.add_scalar('loss', ep_loss, ep)
-        save_pt_dir = args.data_root + '/pts'
+        save_pt_dir = save_dir + '/pts'
         if not os.path.exists(save_pt_dir):
             os.makedirs(save_pt_dir)
         torch.save(model.state_dict(), os.path.join(save_pt_dir, str(ep) + '.pth'))
@@ -147,6 +148,12 @@ def train(args):
 
 
 if __name__ == "__main__":
+    from datasets.lowlight import gen_lowlight_h5
+
+    data_dir = '/home/SENSETIME/sunxin/2_myrepos/data/blackshark/msdct/now'
+    save_dir = '/home/SENSETIME/sunxin/2_myrepos/data/blackshark/h5'
+    gen_lowlight_h5(data_dir, save_dir)
+
     args = get_args()
 
     search = False

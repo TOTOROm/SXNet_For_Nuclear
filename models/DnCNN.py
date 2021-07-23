@@ -89,6 +89,7 @@ class DnCNN(nn.Module):
         layers.append(nn.Conv2d(in_channels=features, out_channels=channels, kernel_size=kernel_size, padding=padding,
                                 bias=False))
         self.dncnn = nn.Sequential(*layers)
+        self.phase = phase
 
     def forward(self, x):
         out = self.dncnn(x)
@@ -98,14 +99,17 @@ class DnCNN(nn.Module):
         else:
             return out
 
+
 if __name__ == '__main__':
     from ptflops import get_model_complexity_info
     import time
+
     with torch.no_grad():
         ch = 1
         net = DnCNN(ch, 'test').cuda()
 
-        f, p = get_model_complexity_info(net, (ch, 512, 512), as_strings=True, print_per_layer_stat=False, verbose=False)
+        f, p = get_model_complexity_info(net, (ch, 512, 512), as_strings=True, print_per_layer_stat=False,
+                                         verbose=False)
         print('FLOPs:', f, 'Parms:', p)
 
         x = torch.randn(1, ch, 512, 512).cuda()

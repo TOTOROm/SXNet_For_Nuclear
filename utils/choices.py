@@ -1,7 +1,7 @@
 from models.MY import feb_rfb_ab_mish_a_add
 from models.BRDNet import BRDNET
 from models.ADNet import ADNET
-from models.DnCNN import DNCNN
+from models.DnCNN import DnCNN
 from models.SXNet import SXNet, DNCNN_based
 from models.UNet import UNet
 
@@ -12,7 +12,7 @@ def choose_model(model_name, phase):
     if model_name == 'ADNet':
         return ADNET(3, phase)
     elif model_name == 'DnCNN':
-        return DNCNN(1, phase)
+        return DnCNN(1, phase)
     elif model_name == 'BRDNet':
         return BRDNET(1, phase)
     elif model_name == 'feb_rfb_ab_mish_a_add':

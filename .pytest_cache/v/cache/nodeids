@@ -1,0 +1,4 @@
+[
+  "test.py::test_from_loader",
+  "test.py::test_from_images"
+]
